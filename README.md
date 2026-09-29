@@ -1,6 +1,6 @@
-# Re-shoot a video — Comfy workflow guide
+# Comfy Reshoot
 
-Upload an MP4, run depth estimation, adjust the camera preview, then submit a workflow to generate a new view.
+A standalone app for reshooting videos with Comfy workflows. Upload an MP4, run depth estimation, adjust the camera preview, then generate a new view.
 
 You need a Comfy Developer Platform account, an API key, and a deployment with the nodes and models listed in [`build/model-files.md`](build/model-files.md). The workflow was demonstrated on a 96 GB GPU; smaller configurations have not been tested. Generation uses deployment credits.
 
@@ -64,6 +64,6 @@ These commands package the local ComfyUI install; they do not download model fil
 - The warp preview is an approximation of the generated view; large camera moves reveal areas no source frame captured.
 - Reloading the page clears the current job and results from the UI.
 
-## License and source
+## License
 
-The camera, geometry reader and WebGL renderer are adapted from ComfyUI_frontend, so this repo is GPL-3.0. The standalone starter code came from Comfy-Org's MIT-licensed [`img2img-web-app`](https://github.com/Comfy-Org/comfy-examples/tree/main/img2img-web-app); its notice is in `THIRD_PARTY_NOTICES/comfy-examples-MIT.txt`. The CrossView node pack's Apache-2.0 license is included in `THIRD_PARTY_NOTICES/CrossViewWarp-LICENSE.txt`. Model licenses are separate.
+GPL-3.0. See [`LICENSE`](LICENSE). Third-party license notices are in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES). Model licenses are separate.
