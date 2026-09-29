@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { estimatePivot, focalPx, invertPose, orbitPose } from "../src/lib/crossview/camera";
 import { readGeometry, type Geometry } from "../src/lib/crossview/cvgeo";
 import { WarpRenderer } from "../src/lib/crossview/warp-renderer";
+import { jobErrorMessage } from "../lib/job-error";
 
 type Output = { id: string; name: string; type: string; url: string };
 type Job = { id: string; status: string; outputs: Output[]; error?: { message?: string } | string | null };
@@ -88,9 +89,9 @@ export function AppRunner() {
     } else if (job.status === "succeeded") {
       setPhase("ready"); setError(false); setMessage("Generation finished. Preview or download a result below.");
     } else {
-      const detail = typeof job.error === "string" ? job.error : job.error?.message;
+      const detail = jobErrorMessage(job.error);
       setPhase(geometry ? "ready" : "idle"); setError(true);
-      setMessage(detail || `Comfy finished the job as ${job.status}.`);
+      setMessage(`${detail} (job ${job.id})`);
     }
   }, [job, phase, geometry]);
 
