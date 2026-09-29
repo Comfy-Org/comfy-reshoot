@@ -66,4 +66,4 @@ These commands package the local ComfyUI install; they do not download model fil
 
 ## License
 
-GPL-3.0. See [`LICENSE`](LICENSE). Third-party license notices are in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES). Model licenses are separate.
+MIT. See [`LICENSE`](LICENSE). Third-party license notices are in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES). Model licenses are separate.
