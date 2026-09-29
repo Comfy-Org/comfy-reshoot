@@ -2,7 +2,7 @@
 
 Upload an MP4, run depth estimation, adjust the camera preview, then submit a workflow to generate a new view.
 
-You need a Comfy Developer Platform account, an API key, and a deployment with the nodes and models listed in [`build/model-files.md`](build/model-files.md). The workflow was demonstrated on a 96 GB GPU and uses your deployment's credits.
+You need a Comfy Developer Platform account, an API key, and a deployment with the nodes and models listed in [`build/model-files.md`](build/model-files.md). The workflow was demonstrated on a 96 GB GPU; smaller configurations have not been tested. Generation uses deployment credits.
 
 ## Run the app
 
@@ -27,32 +27,21 @@ You need a Comfy Developer Platform account, an API key, and a deployment with t
 
 The first job may take several minutes while the deployment starts and loads its models. The server reads the key from `.env.local`; do not expose it in a `NEXT_PUBLIC_` variable or commit the file.
 
-## How the Comfy flow works
+## Comfy workflow
 
-```text
-clip → Comfy asset → analyze.api.json → .cvgeo depth file
-      → browser WebGL camera preview
-clip + camera settings → generate.api.json → result videos
-```
-
-- [`components/app-runner.tsx`](components/app-runner.tsx) submits jobs, checks their status, reads the depth file, and redraws the preview when you move the camera.
-- [`app/api/jobs/route.ts`](app/api/jobs/route.ts) checks the clip and settings. [`lib/comfy.ts`](lib/comfy.ts) loads a workflow, binds the uploaded video to `LoadVideo.file`, submits it with the Comfy SDK and returns a job ID.
-- [`workflows/analyze.api.json`](workflows/analyze.api.json) prepares the clip and returns one `.cvgeo` file. [`workflows/generate.api.json`](workflows/generate.api.json) runs depth, CrossView Warp and MiniMax H3, then saves three videos.
-- `lib/comfy.ts` sends the clip to node `1`, duration/aspect/size to node `2`, camera values to node `5`, and the prompt to node `20`. Update these IDs and input names if you change the corresponding nodes in the API graph.
-- [`src/lib/crossview/cvgeo.ts`](src/lib/crossview/cvgeo.ts) reads the geometry export. `camera.ts` and `warp-renderer.ts` redraw that geometry in WebGL2 so aiming does not submit a new GPU job.
-- The result route fetches output bytes on the server and streams them to the browser. The browser never needs the Comfy API key.
+**Analyze depth** submits `workflows/analyze.api.json` and returns a `.cvgeo` depth file for the browser preview. **Generate new view** submits `workflows/generate.api.json`, which runs MoGe, CrossView Warp, and MiniMax H3 and saves three videos. `lib/comfy.ts` maps the uploaded clip to node `1`, output settings to node `2`, camera values to node `5`, and the prompt to node `20`. The server downloads the outputs and returns them to the browser.
 
 ## Change the app
 
-To change the default camera angle, edit the initial slider values in `components/app-runner.tsx`. To change the prompt sent to H3, edit the prompt field or its default there. `lib/comfy.ts` sends camera values to node `5` and the prompt to node `20`.
+The camera defaults and prompt field are in `components/app-runner.tsx`. `lib/comfy.ts` sends those values to nodes `5` and `20`.
 
 To edit a workflow, open it in ComfyUI and export **Workflow (API)**. Replace the corresponding file in `workflows/`. If the change adds a model or custom node, add it to the Comfy build and publish a new release before running the app.
 
 ## Build the Comfy environment
 
-`workflows/*.api.json` are API-format graphs for job submission. The Deployment Build must contain every node class and model file named by those graphs. The list and upstream download locations are in [`build/model-files.md`](build/model-files.md).
+The deployment Build must include every node and model used by the API workflows. The versions, files, and download commands are in [`build/model-files.md`](build/model-files.md).
 
-Install the Comfy CLI and sign in to the same Comfy account that owns the deployment. These commands assume you already have a local ComfyUI folder prepared with the node and model files listed above. Run the commands from that ComfyUI root (the folder containing `models/` and `custom_nodes/`), not from this web-app repo:
+Install the Comfy CLI and sign in to the Comfy account for your deployment. Run these commands from the prepared ComfyUI folder containing `models/` and `custom_nodes/`:
 
 ```sh
 pip install comfy-cli
@@ -64,19 +53,16 @@ comfy build push --release --target linux/nvidia
 comfy deploy refs compute
 ```
 
-Use a GPU and region shown by the last command, then create a deployment from the released Build on the Developer Platform. Copy the deployment URL into `.env.local`. Keep the generated `comfy-build.yaml` with your own deployment configuration. Worker/GPU availability changes, so pick from the current compute list. Pause or delete deployments when you are finished to stop compute charges.
+Create a deployment from the released Build, choose an available GPU and region, and put its URL in `.env.local`. Stop or delete the deployment when you finish to end GPU charges.
 
-The command sequence packages an already-prepared environment; it does not download gated model files or install GPU-specific Python dependencies. Before using a deployment, run **Analyze depth** and confirm it returns `.cvgeo`, then run **Generate new view** and confirm the videos appear.
-
-The workflow uses the H3 CrossView LoRA under its model-specific license. Read the licenses linked in [`build/model-files.md`](build/model-files.md) before downloading or redistributing model files. Model weights are not stored in Git.
+These commands package the local ComfyUI install; they do not download model files. After deployment, run **Analyze depth** and confirm it returns `.cvgeo`, then run **Generate new view** and confirm three videos appear.
 
 ## Limits
 
 - The sample accepts MP4 files up to 100 MB and uses clips between 5 and 15 seconds.
 - Changing the clip, aspect or output size requires running depth analysis again.
 - The warp preview is an approximation of the generated view; large camera moves reveal areas no source frame captured.
-- The UI keeps the active job in memory. Reloading the page clears it.
-- The included test clip is synthetic. You can also analyze an MP4 you have permission to process.
+- Reloading the page clears the current job and results from the UI.
 
 ## License and source
 

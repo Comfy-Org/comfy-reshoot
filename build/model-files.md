@@ -2,7 +2,7 @@
 
 Prepare this ComfyUI version, node pack, and model files before creating the deployment Build.
 
-The built-in H3 and MoGe node implementations used by this guide came from ComfyUI `2255709aa0` (v0.37.0). In your local ComfyUI checkout, use that revision before preparing the Build:
+Use ComfyUI `2255709aa0` (v0.37.0), which contains the H3 and MoGe nodes used by these workflows:
 
 ```sh
 git -C /path/to/ComfyUI checkout 2255709aa0
@@ -33,7 +33,7 @@ If you already cloned the repo, run `git fetch origin` then `git checkout fbb1e9
 | `MiniMax-H3_Ref2VA-LoRA-CrossView-Warp_v1_3500.safetensors` | `loras/` | [Cseti/MiniMax-H3_Ref2VA-LoRA-CrossView-Warp_v1](https://huggingface.co/Cseti/MiniMax-H3_Ref2VA-LoRA-CrossView-Warp_v1) |
 | `minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors` | `loras/` | [lightx2v/Minimax-h3-Turbo](https://huggingface.co/lightx2v/Minimax-h3-Turbo) |
 
-Some model repositories require access approval. Follow each model card's terms. Do not commit model weights. If a node reports a missing Python package during build or startup, install it from that node's `requirements.txt` in the ComfyUI environment, then rebuild.
+Some model repositories require access approval. Follow each model card's terms and do not commit the weights. If a node reports a missing Python package, install it from that node's `requirements.txt` in the ComfyUI environment and rebuild.
 
 Run these commands from the ComfyUI root (the folder that contains `models/`). Install the Hugging Face CLI if needed. If a model repository requires login, run `hf auth login` first:
 
@@ -49,4 +49,4 @@ hf download Cseti/MiniMax-H3_Ref2VA-LoRA-CrossView-Warp_v1 MiniMax-H3_Ref2VA-LoR
 hf download lightx2v/Minimax-h3-Turbo minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors --local-dir models/loras
 ```
 
-After downloading the files, run `comfy build init` from this ComfyUI root to capture them in `comfy-build.yaml`. This workflow was demonstrated on a 96 GB GPU; lower-memory configurations have not been tested.
+After downloading the files, run `comfy build init` from this ComfyUI root to capture them in `comfy-build.yaml`.
