@@ -6,7 +6,7 @@ This repo is a small local, single-user teaching app. It needs a Comfy Developer
 
 ## Run the app
 
-1. Create a Comfy API deployment by following [Build and deploy ComfyUI](https://docs.comfy.org/development/serverless/overview). Start with the model and node list in [`build/model-files.md`](build/model-files.md). The deployment must load the custom CrossView nodes, MiniMax H3, MoGe and the CrossView LoRA.
+1. Install [Node.js 22.6 or newer](https://nodejs.org/). This demo also needs a Comfy Developer Platform deployment with the custom CrossView nodes, MiniMax H3, MoGe and the CrossView LoRA. Follow [`build/model-files.md`](build/model-files.md) to prepare it. The deployment is a separate prerequisite: cloning this web repo does not install multi-gigabyte model weights or create a GPU deployment.
 2. Copy this repository and make local settings:
 
    ```sh
@@ -15,7 +15,7 @@ This repo is a small local, single-user teaching app. It needs a Comfy Developer
    cp .env.example .env.local
    ```
 
-3. Add the API key for the workspace that owns your deployment to `COMFY_API_KEY`. Set `COMFY_BASE_URL` to the deployment URL from the Developer Platform.
+3. Add the API key for the workspace that owns your deployment to `COMFY_API_KEY`. Set `COMFY_BASE_URL` to the deployment URL from the Developer Platform; the SDK reads both variables from `.env.local` on the server.
 4. Install and start the app:
 
    ```sh
@@ -52,16 +52,21 @@ Try changing a workflow node in ComfyUI and exporting **Workflow (API)**. Save t
 
 `workflows/*.api.json` are API-format graphs for job submission. The Deployment Build must contain every node class and model file named by those graphs. The list and upstream download locations are in [`build/model-files.md`](build/model-files.md).
 
-From a ComfyUI install that has those custom nodes and models, create a Build definition and release:
+Install the Comfy CLI and sign in to the same Comfy account that owns the deployment. These commands assume you already have a local ComfyUI folder prepared with the node and model files listed above. Run the commands from that ComfyUI root (the folder containing `models/` and `custom_nodes/`), not from this web-app repo:
 
 ```sh
+pip install comfy-cli
+comfy setup --where cloud
+cd /path/to/ComfyUI
 comfy build init --name comfy-reshoot --models-dir ./models --custom-nodes-dir ./custom_nodes
 comfy build status
 comfy build push --release --target linux/nvidia
 comfy deploy refs compute
 ```
 
-Use a GPU and region shown by the last command, then create a deployment from the released Build using the Deploy page or `comfy deploy up`. Copy its deployment URL into `.env.local`. Keep the generated `comfy-build.yaml` with your own deployment configuration. Worker/GPU availability changes, so pick from the current compute list. Pause or delete deployments when you are finished to stop compute charges.
+Use a GPU and region shown by the last command, then create a deployment from the released Build on the Developer Platform. Copy the deployment URL into `.env.local`. Keep the generated `comfy-build.yaml` with your own deployment configuration. Worker/GPU availability changes, so pick from the current compute list. Pause or delete deployments when you are finished to stop compute charges.
+
+The command sequence packages an already-prepared environment; it does not download gated model files or install GPU-specific Python dependencies for you. The node install and exact revision, model filenames and target folders are listed in [`build/model-files.md`](build/model-files.md). Test a build before relying on it: run the **Analyze depth** step, confirm it returns `.cvgeo`, then run **Generate new view** and confirm all three videos appear. The app has been tested against a deployment missing the custom nodes and will show a setup error; a complete fresh deployment has not been rebuilt as part of this guide.
 
 The workflow uses the H3 CrossView LoRA under its model-specific license. Read the licenses linked in [`build/model-files.md`](build/model-files.md) before downloading or redistributing model files. Model weights are not stored in Git.
 

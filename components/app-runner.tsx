@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { estimatePivot, focalPx, invertPose, orbitPose } from "../src/lib/crossview/camera";
+import { estimatePivot, focalPx, invertPose, orbitPose, sourceAim } from "../src/lib/crossview/camera";
 import { readGeometry, type Geometry } from "../src/lib/crossview/cvgeo";
 import { WarpRenderer } from "../src/lib/crossview/warp-renderer";
 import { jobErrorMessage } from "../lib/job-error";
@@ -13,6 +13,7 @@ export function AppRunner() {
   const [video, setVideo] = useState<File | null>(null);
   const [geometry, setGeometry] = useState<Geometry | null>(null);
   const [job, setJob] = useState<Job | null>(null);
+  const [pollRetry, setPollRetry] = useState(0);
   const [phase, setPhase] = useState<"idle" | "analyzing" | "ready" | "generating">("idle");
   const [message, setMessage] = useState("Choose a 5–15 second MP4 clip.");
   const [error, setError] = useState(false);
@@ -38,7 +39,7 @@ export function AppRunner() {
       const fx = focalPx(geometry.width, hfov);
       const pivot = estimatePivot(geometry.depth[0], geometry.width, geometry.height, fx);
       renderer.render({
-        inverseTarget: invertPose(orbitPose(azimuth, elevation, distance, pivot)),
+        inverseTarget: invertPose(orbitPose(azimuth, elevation, distance, pivot, sourceAim(pivot))),
         fx,
         sourceFx: fx,
         cx: geometry.width / 2,
@@ -60,20 +61,26 @@ export function AppRunner() {
         const next = await response.json() as Job & { error?: string };
         if (!response.ok) throw new Error(typeof next.error === "string" ? next.error : "Could not check job status.");
         setJob(next);
+        setPollRetry(0);
         setMessage(next.status === "queued" ? "Waiting for a GPU…" : "Comfy is running the workflow…");
       } catch (cause) {
         setError(true);
         setMessage(cause instanceof Error ? cause.message : "Could not check job status.");
+        setPollRetry((retry) => retry + 1);
       }
-    }, 2000);
+    }, pollRetry ? 5000 : 2000);
     return () => window.clearTimeout(timer);
-  }, [job]);
+  }, [job, pollRetry]);
 
   useEffect(() => {
     if (!job || !["succeeded", "failed", "canceled", "expired"].includes(job.status)) return;
     if (phase === "analyzing" && job.status === "succeeded") {
       const file = job.outputs.find((output) => output.name.endsWith(".cvgeo"));
-      if (!file) { setError(true); setMessage("The analysis finished without a .cvgeo output."); return; }
+      if (!file) {
+        setPhase("idle"); setJob(null); setError(true);
+        setMessage("The analysis finished without a .cvgeo output. Check that the Analyze workflow saves geometry, then try again.");
+        return;
+      }
       fetch(file.url).then((response) => {
         if (!response.ok) throw new Error("Could not download the depth preview.");
         return response.arrayBuffer();
@@ -83,6 +90,7 @@ export function AppRunner() {
         setError(false);
         setMessage("Depth is ready. Move the camera, then generate.");
       }).catch((cause: unknown) => {
+        setPhase("idle"); setJob(null);
         setError(true);
         setMessage(cause instanceof Error ? cause.message : "Could not read the depth preview.");
       });
@@ -120,6 +128,7 @@ export function AppRunner() {
   }
 
   function chooseVideo(file: File | undefined) {
+    setError(false);
     setVideo(null); setGeometry(null); setJob(null); setPhase("idle");
     if (!file) { setMessage("Choose a 5–15 second MP4 clip."); return; }
     if (file.type !== "video/mp4") { setError(true); setMessage("For this guide, choose an MP4 clip."); return; }
@@ -139,6 +148,10 @@ export function AppRunner() {
 
   const results = job?.status === "succeeded" && phase === "ready"
     ? job.outputs.filter((output) => /result|original-audio|warp/i.test(output.name)) : [];
+  const jobActive = phase === "analyzing" || phase === "generating";
+  const settingsChanged = (message: string) => {
+    setGeometry(null); setJob(null); setPhase("idle"); setMessage(message); setError(false);
+  };
 
   return (
     <main className="shell">
@@ -150,9 +163,9 @@ export function AppRunner() {
 
       <section className="studio" aria-label="Re-shoot studio">
         <aside className="controls">
-          <label className="field"><span>01 · Source clip</span><input type="file" accept="video/mp4" onChange={(event) => chooseVideo(event.target.files?.[0])} /></label>
-          <label className="field"><span>Aspect ratio</span><select value={aspect} onChange={(event) => { setAspect(event.target.value); setGeometry(null); setPhase("idle"); setMessage("Settings changed. Analyze depth again."); }}><option>16:9</option><option>9:16</option><option>1:1</option><option>4:3</option></select></label>
-          <label className="field"><span>Output size</span><select value={megapixels} onChange={(event) => { setMegapixels(Number(event.target.value)); setGeometry(null); setPhase("idle"); setMessage("Settings changed. Analyze depth again."); }}><option value={0.4}>480p · 0.4 MP</option><option value={1}>768p · 1 MP</option></select></label>
+          <label className="field"><span>01 · Source clip</span><input type="file" accept="video/mp4" disabled={jobActive} onChange={(event) => chooseVideo(event.target.files?.[0])} /></label>
+          <label className="field"><span>Aspect ratio</span><select disabled={jobActive} value={aspect} onChange={(event) => { setAspect(event.target.value); settingsChanged("Settings changed. Analyze depth again."); }}><option>16:9</option><option>9:16</option><option>1:1</option><option>4:3</option></select></label>
+          <label className="field"><span>Output size</span><select disabled={jobActive} value={megapixels} onChange={(event) => { setMegapixels(Number(event.target.value)); settingsChanged("Settings changed. Analyze depth again."); }}><option value={0.4}>480p · 0.4 MP</option><option value={1}>768p · 1 MP</option></select></label>
           <button type="button" disabled={!video || phase === "analyzing" || phase === "generating"} onClick={() => void submit("analyze")}>{phase === "analyzing" ? "Analyzing…" : "Analyze depth"}</button>
           <fieldset disabled={!geometry || phase === "generating"}>
             <legend>02 · Aim camera</legend>
@@ -161,7 +174,7 @@ export function AppRunner() {
             <label className="field"><span>Distance · {distance.toFixed(2)}×</span><input type="range" min="0.5" max="2" step="0.05" value={distance} onChange={(event) => setDistance(Number(event.target.value))} /></label>
           </fieldset>
           <label className="field"><span>What is beyond the frame? (optional)</span><textarea value={prompt} maxLength={500} onChange={(event) => setPrompt(event.target.value)} placeholder="Describe what the new view should reveal." /></label>
-          <button type="button" className="primary" disabled={!video || !geometry || phase === "generating"} onClick={() => void submit("generate")}>{phase === "generating" ? "Generating…" : "Generate new view"}</button>
+          <button type="button" className="primary" disabled={!video || !geometry || jobActive} onClick={() => void submit("generate")}>{phase === "generating" ? "Generating…" : "Generate new view"}</button>
           <p className={`status${error ? " error" : ""}`} role="status">{message}</p>
         </aside>
         <section className="preview" aria-label="Camera preview">
