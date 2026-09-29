@@ -23,7 +23,7 @@ This repo is a small local, single-user teaching app. It needs a Comfy Developer
    npm run dev
    ```
 
-5. Open <http://localhost:3000>, select an MP4 clip between 5 and 15 seconds, and choose **Analyze depth**. When analysis finishes, move the camera with the sliders, then choose **Generate new view**. The results include the generated video, original-audio version and warp guide.
+5. Open <http://localhost:3000>, choose [`samples/sunlit-room-test.mp4`](samples/sunlit-room-test.mp4), and select **Analyze depth**. When analysis finishes, move the camera with the sliders, then choose **Generate new view**. The results include the generated video, original-audio version and warp guide. The included 5-second synthetic clip has simple foreground, middle-ground and background shapes, so you can try the flow without finding or uploading a personal video.
 
 The first job may take several minutes while the deployment starts and loads its models. The key stays in `.env.local` and is read by the local server. Do not put it in a `NEXT_PUBLIC_` variable or commit the file.
 
@@ -71,7 +71,7 @@ The workflow uses the H3 CrossView LoRA under its model-specific license. Read t
 - Changing the clip, aspect or output size requires running depth analysis again.
 - The warp preview is an approximation of the generated view; large camera moves reveal areas no source frame captured.
 - The UI keeps the active job ID in memory. Reloading the page loses its history; copy the ID from the status response if you need to inspect a job after a reload.
-- No source clip is included. Use a video you have permission to process.
+- The included sample is synthetic. For a more realistic depth estimate, try your own MP4 that you have permission to process.
 
 ## License and source
 
