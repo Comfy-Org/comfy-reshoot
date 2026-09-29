@@ -2,7 +2,7 @@
 
 A standalone app for reshooting videos with Comfy workflows. Upload an MP4, run depth estimation, adjust the camera preview, then generate a new view.
 
-You need a Comfy Developer Platform account, an API key, and a deployment with the nodes and models listed in [`build/model-files.md`](build/model-files.md). The workflow was demonstrated on a 96 GB GPU; smaller configurations have not been tested. Generation uses deployment credits.
+You need a Comfy Developer Platform account, an [API key](https://platform.comfy.org/profile/api-keys?onboarding=comfy_api), and a deployment with the nodes and models listed in [`build/model-files.md`](build/model-files.md). The workflow was demonstrated on a 96 GB GPU; smaller configurations have not been tested. Generation uses deployment credits.
 
 ## Run the app
 
